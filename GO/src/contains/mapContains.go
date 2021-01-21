@@ -1,6 +1,9 @@
-package GO
+package contains
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"fmt"
+)
 
 //check if the first map (expectedMap) is completely exists inside the second map (mainMap).
 //if false, return maps of the actual values, and the expected values
@@ -38,22 +41,31 @@ func MapContains(expectedMap, mainMap map[string]interface{}) (contains bool, ac
 func DeepContains(expectedObj, mainObj interface{}) (contains bool, actualDiff, expectedDiff map[string]interface{}, err error) {
 	strMap1, eMap1 := json.Marshal(expectedObj)
 	if eMap1 != nil {
-		return false, nil, nil, err
+		return false, nil, nil, containsError{"json.Marshal", expectedObj}
 	}
 	strMap2, eMap2 := json.Marshal(mainObj)
 	if eMap2 != nil {
-		return false, nil, nil, err
+		return false, nil, nil, containsError{"json.Marshal", expectedObj}
 	}
 	var map1, map2 interface{}
 
 	jsonErr1 := json.Unmarshal(strMap1, &map1)
 	if jsonErr1 != nil {
-		return false, nil, nil, err
+		return false, nil, nil, containsError{"json.Unmarshal", strMap1}
 	}
 	jsonErr2 := json.Unmarshal(strMap2, &map2)
 	if jsonErr2 != nil {
-		return false, nil, nil, err
+		return false, nil, nil, containsError{"json.Unmarshal", strMap2}
 	}
-	retContains, retActual, retExpected := MapContains(map1.(map[string]interface{}), map2.(map[string]interface{}))
-	return retContains, retActual, retExpected, nil
+	contains, actualDiff, expectedDiff = MapContains(map1.(map[string]interface{}), map2.(map[string]interface{}))
+	return
+}
+
+type containsError struct {
+	message string
+	obj     interface{}
+}
+
+func (e containsError) Error() string {
+	return fmt.Sprintf("error while excecuting contains: \"%v\" - cause: %v", e.message, e.obj)
 }
