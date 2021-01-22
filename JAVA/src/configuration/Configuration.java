@@ -18,6 +18,7 @@ public class Configuration<T extends BaseConfiguration> {
 	private T dummyObject;
 	private static Map<String,BaseConfiguration> map = new HashMap<>();
 	public static boolean runtimeUpdate = false;
+	public static boolean firstReadLog = true;
 	private static Gson gson = new GsonBuilder().setPrettyPrinting().serializeNulls().create();
 	
 	public Configuration(Class<T> confClass) throws InstantiationException, IllegalAccessException {
@@ -38,7 +39,6 @@ public class Configuration<T extends BaseConfiguration> {
 			}
 		}
 		File c = new File(fileName);
-		System.out.println(c.getAbsolutePath());
 		if (!c.exists()) {
 			System.out.println("file \""+fileName+"\" not found, creating file...");
 			store(getDefault());
@@ -53,6 +53,9 @@ public class Configuration<T extends BaseConfiguration> {
 				return getDefault();
 			}
 			map.put(fileName, conf);
+			if(firstReadLog && !runtimeUpdate) {
+				System.out.println("the file \""+fileName+"\" imported successfully");
+			}
 			return conf;
 		} catch (Exception e) {
 			System.err.println("error while getting conf \""+fileName+"\", returned default\ncause by:");
@@ -63,8 +66,9 @@ public class Configuration<T extends BaseConfiguration> {
 	}
 	
 	private T getDefault() {
-		map.put(fileName, dummyObject);
-		return dummyObject;
+		T def = confClass.cast(dummyObject.getDefault());
+		map.put(fileName, def);
+		return def;
 	}
 	
 	public void store(T configuration) {
