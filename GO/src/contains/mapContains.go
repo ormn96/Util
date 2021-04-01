@@ -3,33 +3,88 @@ package contains
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 )
 
-//check if the first map (expectedMap) is completely exists inside the second map (mainMap).
-//if false, return maps of the actual values, and the expected values
-func MapContains(expectedMap, mainMap map[string]interface{}) (contains bool, actualDiff, expectedDiff map[string]interface{}) {
+var TimeDiff = time.Second
+
+//check if the first map (sub) is completely exists inside the second (main).
+//if false, returns map with expected and actual
+func MapContains(expectedMap, main map[string]interface{}) (contains bool, actualDiff map[string]interface{}, expectedDiff map[string]interface{}) {
 	contains = true
 	actualDiff = make(map[string]interface{})
 	expectedDiff = make(map[string]interface{})
-	for eKey, eValue := range expectedMap { //go to every field in expectedMap
-		aValue, aExists := mainMap[eKey]
-		if !aExists { //if the key not exist in mainMap
+	for eKey, eValue := range expectedMap {
+		aValue, aExist := main[eKey]
+		if !aExist {
 			expectedDiff[eKey] = eValue
 			actualDiff[eKey] = "#NOT_FOUND#"
 			contains = false
 			continue
 		}
-		//START deep contains
-		mapEValue, okE := eValue.(map[string]interface{})
-		mapAValue, okA := aValue.(map[string]interface{})
-		if okA && okE { // if both values are of type map[string]interface{} , AKA other unknown struct
-			if recContains, recActual, recExpected := MapContains(mapEValue, mapAValue); !recContains {
-				expectedDiff[eKey] = recExpected
-				actualDiff[eKey] = recActual
-				contains = false
+		if eValue == "#ANY_VALUE#" {
+			continue
+		}
+		//deep contains
+		switch eValue.(type) {
+
+		case map[string]interface{}:
+			mapAValue, okA := aValue.(map[string]interface{})
+			if okA { //object Deep contains
+				if recContains, recExpected, recActual := MapContains(eValue.(map[string]interface{}), mapAValue); !recContains {
+					expectedDiff[eKey] = recExpected
+					actualDiff[eKey] = recActual
+					contains = false
+				}
+				continue
 			}
-			//END deep contains
-		} else if eValue != aValue { // if not struct, check if equals
+
+		case []interface{}:
+			aValueArr, okAArr := aValue.([]interface{})
+			arrResponse := make([]interface{}, 0)
+			if okAArr { //array Deep contains
+				for _, eArrValue := range eValue.([]interface{}) {
+					found := false
+					for _, aArrValue := range aValueArr {
+
+						if recContains, _, _ := MapContains(
+							map[string]interface{}{"": eArrValue},
+							map[string]interface{}{"": aArrValue}); recContains {
+							found = true
+						}
+					}
+					if !found {
+						arrResponse = append(arrResponse, eArrValue)
+					}
+				}
+				if len(arrResponse) != 0 {
+					expectedDiff[eKey] = arrResponse
+					actualDiff[eKey] = aValue
+					contains = false
+				}
+				continue
+			}
+
+		case string:
+			var eValTime, aValTime time.Time
+			aValueStr, okAStr := aValue.(string)
+			if okAStr {
+				e1 := eValTime.UnmarshalText([]byte(eValue.(string)))
+				e2 := aValTime.UnmarshalText([]byte(aValueStr))
+				if e1 == nil && e2 == nil {
+					if eValTime.Round(TimeDiff) != aValTime.Round(TimeDiff) {
+						expectedDiff[eKey] = eValue
+						actualDiff[eKey] = aValue
+						contains = false
+					}
+					continue
+				}
+			}
+
+		}
+
+		//END deep contains
+		if eValue != aValue {
 			expectedDiff[eKey] = eValue
 			actualDiff[eKey] = aValue
 			contains = false
@@ -38,34 +93,91 @@ func MapContains(expectedMap, mainMap map[string]interface{}) (contains bool, ac
 	return
 }
 
-func DeepContains(expectedObj, mainObj interface{}) (contains bool, actualDiff, expectedDiff map[string]interface{}, err error) {
-	strMap1, eMap1 := json.Marshal(expectedObj)
-	if eMap1 != nil {
-		return false, nil, nil, containsError{"json.Marshal", expectedObj}
+//check if the first object (sub) is completely exists inside the second (main), AKA every attribute in sub equals to the same attribute in main(if non primitive type, check recursively).
+//if false, returns map with expected and actual.
+//error returned if there is a problem while marshaling(JSON)
+func DeepContains(sub, main interface{}) (contains bool, actualDiff map[string]interface{}, expectedDiff map[string]interface{}, err error) {
+	subStr, eSub := json.Marshal(sub)
+	if eSub != nil {
+		return false, nil, nil, ContainsError{"Failed to marshal sub Object", eSub}
 	}
-	strMap2, eMap2 := json.Marshal(mainObj)
-	if eMap2 != nil {
-		return false, nil, nil, containsError{"json.Marshal", expectedObj}
+	mainStr, eMain := json.Marshal(main)
+	if eMain != nil {
+		return false, nil, nil, ContainsError{"Failed to marshal main Object", eMain}
 	}
-	var map1, map2 interface{}
 
-	jsonErr1 := json.Unmarshal(strMap1, &map1)
-	if jsonErr1 != nil {
-		return false, nil, nil, containsError{"json.Unmarshal", strMap1}
+	return DeepContainsJson(subStr, mainStr)
+}
+
+//check if the first object (sub) is completely exists inside the second (main), AKA every attribute in sub equals to the same attribute in main(if non primitive type, check recursively).
+//if false, returns map with expected and actual.
+//error returned if there is a problem while marshaling(JSON)
+func DeepContainsJson(subJson, mainJson []byte) (contains bool, actualDiff map[string]interface{}, expectedDiff map[string]interface{}, err error) {
+	var subInt, mainInt interface{}
+	if e := json.Unmarshal(subJson, &subInt); e != nil {
+		return false, nil, nil, ContainsError{"Failed to unmarshal sub Object", e}
 	}
-	jsonErr2 := json.Unmarshal(strMap2, &map2)
-	if jsonErr2 != nil {
-		return false, nil, nil, containsError{"json.Unmarshal", strMap2}
+
+	if e := json.Unmarshal(mainJson, &mainInt); e != nil {
+		return false, nil, nil, ContainsError{"Failed to unmarshal main Object", e}
 	}
-	contains, actualDiff, expectedDiff = MapContains(map1.(map[string]interface{}), map2.(map[string]interface{}))
+	contains, actualDiff, expectedDiff = MapContains(subInt.(map[string]interface{}), mainInt.(map[string]interface{}))
+	err = nil
 	return
 }
 
-type containsError struct {
+type ContainsError struct {
 	message string
-	obj     interface{}
+	cause   error
 }
 
-func (e containsError) Error() string {
-	return fmt.Sprintf("error while excecuting contains: \"%v\" - cause: %v", e.message, e.obj)
+func (e ContainsError) Error() string {
+	return fmt.Sprintf("%v, cause: %v", e.message, e.cause)
+}
+
+func EncapsulateReportFail(receivedMsg, expectedMsg []byte, actual, expected interface{}) ContainsReport {
+	var em, rm interface{}
+
+	if json.Unmarshal(receivedMsg, &rm) != nil || json.Unmarshal(expectedMsg, &em) != nil {
+		return ContainsReport{
+			Status:      "failed",
+			ReceivedMsg: string(receivedMsg),
+			ExpectedMsg: string(expectedMsg),
+			Difference: ContainsReportDiff{
+				Actual:   actual,
+				Expected: expected,
+			},
+		}
+	} else {
+		return ContainsReport{
+			Status:      "failed",
+			ReceivedMsg: rm,
+			ExpectedMsg: em,
+			Difference: ContainsReportDiff{
+				Actual:   actual,
+				Expected: expected,
+			},
+		}
+	}
+
+}
+
+type ContainsReport struct {
+	Status      string
+	ReceivedMsg interface{}
+	ExpectedMsg interface{}
+	Difference  ContainsReportDiff
+}
+
+type ContainsReportDiff struct {
+	Actual   interface{}
+	Expected interface{}
+}
+
+func (r ContainsReport) ToJson() string {
+	j, e := json.Marshal(r)
+	if e != nil {
+		return "error while marshaling report - " + e.Error()
+	}
+	return string(j)
 }
