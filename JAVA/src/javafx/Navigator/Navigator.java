@@ -61,7 +61,7 @@ public class Navigator implements NavigatorInterface {
 	 * navigate to the given file(window) and push the current view to the history
 	 */
 	@Override
-	public GuiController navigate(String destenation) {
+	public Object navigate(String destenation) {
 		String fxmlName = null;
 		if (destenation == null) {
 			baseNode.getChildren().clear();
@@ -84,7 +84,6 @@ public class Navigator implements NavigatorInterface {
 			current = new Tab();
 			current.node = loader.load();
 			current.controller = loader.getController();
-			current.controller.init();
 			current.name = destenation;
 			baseNode.getChildren().clear();
 			baseNode.getChildren().add(current.node);
@@ -131,10 +130,10 @@ public class Navigator implements NavigatorInterface {
 	/** helper class for saving windows */
 	private class Tab {
 		public Node node;
-		public GuiController controller;
+		public Object controller;
 		public String name;
 
-		public Tab(Node body, GuiController controller, String name) {
+		public Tab(Node body, Object controller, String name) {
 			super();
 			this.node = body;
 			this.controller = controller;

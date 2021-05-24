@@ -5,7 +5,7 @@ public interface NavigatorInterface {
 	/**
 	 * navigate to the given file(window) and push the current view to the history
 	 */
-	GuiController navigate(String destenation);
+	Object navigate(String destenation);
 
 	/** navigates to the last page all the data from current page will be deleted */
 	void back();
