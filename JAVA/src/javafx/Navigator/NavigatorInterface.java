@@ -7,17 +7,20 @@ public interface NavigatorInterface {
 	 */
 	Object navigate(String destenation);
 
-	/** navigates to the last page all the data from current page will be deleted */
-	void back();
+	/** navigates to the last page all the data from current page will be deleted 
+	 * @return */
+	Object back();
 
-	/** navigates to the default page(empty Page) and clear the history */
-	void clearHistory();
+	/** navigates to the default page(empty Page) and clear the history 
+	 * @return */
+	Object clearHistory();
 
 	/**
 	 * navigates to the given page and clear the history
 	 * 
 	 * @param fxml the page to navigate
+	 * @return 
 	 */
-	void clearHistory(String fxml);
+	Object clearHistory(String fxml);
 
 }

@@ -6,17 +6,17 @@ import java.util.Stack;
 
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
-import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.layout.Pane;
-import javafx.stage.Stage;
 
 /** (Singleton) class for navigation between windows */
 public class Navigator implements NavigatorInterface {
 
 	private static NavigatorInterface instance = null;
 	private static Pane baseNode = null;
-	private static String defaultTab = "Motd";
+	private static String defaultTab = null;
+	@SuppressWarnings("rawtypes")
+	private static Class fxmlAnchor = Navigator.class;
+	
 	private Tab current = null;
 
 	private Stack<Tab> history;
@@ -25,7 +25,6 @@ public class Navigator implements NavigatorInterface {
 		if (baseNode == null)
 			throw new RuntimeException("Navigator not initiated, run Navigator.init(Pane baseNode) first");
 		history = new Stack<>();
-		navigate("logIn");
 	}
 	
 	public static void setNavigator(NavigatorInterface nav) {
@@ -59,6 +58,7 @@ public class Navigator implements NavigatorInterface {
 
 	/**
 	 * navigate to the given file(window) and push the current view to the history
+	 * @return the controller of the screen
 	 */
 	@Override
 	public Object navigate(String destenation) {
@@ -75,7 +75,8 @@ public class Navigator implements NavigatorInterface {
 		// push the current tab to the history
 		if (current != null)
 			history.push(current);
-		URL screen = getClass().getResource(fxmlName);
+		
+		URL screen = fxmlAnchor.getResource(fxmlName);
 		if (screen == null)
 			return navigate(null);
 		FXMLLoader loader = new FXMLLoader();
@@ -96,36 +97,75 @@ public class Navigator implements NavigatorInterface {
 		return null;
 	}
 
-	/** navigates to the last page all the data from current page will be deleted */
+	/** navigates to the last page all the data from current page will be deleted 
+	 * @return the controller of the screen
+	 */
 	@Override
-	public void back() {
+	public Object back() {
 		if (history.isEmpty())
-			return;
+			return null;
 		Tab last = history.pop();
 		current = last;
 		baseNode.getChildren().clear();
 		baseNode.getChildren().add(current.node);
+		return current.controller;
 	}
 
-	/** navigates to the default page(empty Page) and clear the history */
+	/** navigates to the default page(empty Page) and clear the history 
+	 * @return the controller of the screen
+	 */
 	@Override
-	public void clearHistory() {
-		history = new Stack<>();
+	public Object clearHistory() {
+		history.clear();
 		current = null;
 		navigate(defaultTab);
+		if(current!=null)
+			return current.controller;
+		return null;
 	}
 
 	/**
 	 * navigates to the given page and clear the history
 	 * 
 	 * @param fxml the page to navigate
+	 * @return the controller of the screen
 	 */
 	@Override
-	public void clearHistory(String fxml) {
-		history = new Stack<>();
+	public Object clearHistory(String fxml) {
+		history.clear();
 		current = null;
 		navigate(fxml);
+		if(current!=null)
+			return current.controller;
+		return null;
 	}
+
+	/**
+	 * gets the default tab to navigate after {@link #clearHistory()}
+	 * @return the defaultTab
+	 */
+	public static String getDefaultTab() {
+		return defaultTab;
+	}
+
+	/**
+	 * sets the default tab to navigate after {@link #clearHistory()}
+	 * @param defaultTab the defaultTab to set
+	 */
+	public static void setDefaultTab(String defaultTab) {
+		Navigator.defaultTab = defaultTab;
+	}
+	
+	
+	/**
+	 * sets anchor for the FXML files
+	 * @param fxmlAnchor the fxmlAnchor to set, class in the folder of the FXML files
+	 */
+	@SuppressWarnings("rawtypes")
+	public static void setFxmlAnchor(Class fxmlAnchor) {
+		Navigator.fxmlAnchor = fxmlAnchor;
+	}
+
 
 	/** helper class for saving windows */
 	private class Tab {
