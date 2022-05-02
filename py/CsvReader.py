@@ -57,3 +57,15 @@ class CsvReader:
                 return _CsvRow(self._iter.__next__(), header)
 
         return CsvIter()
+
+    def to_dict(self):
+        if not self._has_header:
+            raise NotImplementedError("dict keys missing")
+        d = dict()
+        for k in self._header:
+            d[k] = []
+        for v in self:
+            for k in self._header:
+                d[k].append(v[k])
+
+        return d
