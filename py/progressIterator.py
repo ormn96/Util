@@ -3,6 +3,18 @@ class ProgressIterator:
     __slots__ = ['__iterable', 'maxval', 'currval', '_pattern']
 
     def __init__(self, pattern="(%s of %s)"):
+        """
+        ability to print progress in iterator in your code,
+        just print the ProgressIterator Object itself to print the current iteration
+        
+        :param pattern:
+            print pattern as defined in str.format()
+
+        credit - Or Man 2022
+
+         https://github.com/ormn96/Util
+
+        """
         self._pattern = pattern
 
     def __call__(self, iterable):

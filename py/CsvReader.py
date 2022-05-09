@@ -43,6 +43,8 @@ class CsvReader:
             bool - if the file includes header [default=True]
 
             credit - Or Man 2022
+
+            https://github.com/ormn96/Util
         """
         self._has_header = has_header
         with open(file_name, 'r') as csvfile:
