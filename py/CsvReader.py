@@ -28,7 +28,22 @@ class _CsvRow:
 class CsvReader:
     __slots__ = ['_raw_data', '_has_header', '_header']
 
-    def __init__(self, file_name, has_header=True):
+    def __init__(self, file_name:str, has_header=True):
+        """
+            Csv Reader
+
+            if the file has a header, this class get the option to read each row by the value in it's header.
+
+            value of each row can be accessed by index( ['key_name'] ) or by attribute ( row.key_name )
+
+            :param file_name:
+             str - the name of the file to read
+
+            :param has_header:
+            bool - if the file includes header [default=True]
+
+            credit - Or Man 2022
+        """
         self._has_header = has_header
         with open(file_name, 'r') as csvfile:
             reader = csv.reader(csvfile)
@@ -59,6 +74,10 @@ class CsvReader:
         return CsvIter()
 
     def to_dict(self):
+        """
+        create dictionary with each header value as key and list of the column as value
+        :return: dictionary representation of the file
+        """
         if not self._has_header:
             raise NotImplementedError("dict keys missing")
         d = dict()

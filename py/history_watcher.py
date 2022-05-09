@@ -11,6 +11,8 @@ class HistoryWatcher(keras.callbacks.Callback):
 
         :param output_path:
             path to folder to write the object after each epoch
+
+        credit - Or Man 2022
         """
         super().__init__()
         if not output_path.endswith(".csv"):
