@@ -1,5 +1,7 @@
 package validation;
 
+import java.util.regex.Pattern;
+
 /**
  * class for checking strings
  * @author Or Man
@@ -108,5 +110,16 @@ public class StringValidator {
 		}
 
 		return sum%10 == 0;
+	}
+
+	/**
+	 * check string for valid number format
+	 * @param number the string to check
+	 * @return if the string is valid number(including scientific notation)
+	 * @throws ValidationException if the string has characters that dont represent number
+	 */
+	public static boolean checkNumberFormat(String number) throws ValidationException {
+		Pattern p = Pattern.compile("[-+]?\\d*(?:.\\d+)?(?:e[+-]?\\d+)?", Pattern.CASE_INSENSITIVE);
+		return p.matcher(number).matches()
 	}
 }
